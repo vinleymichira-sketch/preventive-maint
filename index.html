@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PM Board</title>
+  <style>
+    body {
+      margin: 0;
+      background: #0b1220;
+      color: #e2e8f0;
+      font-family: Arial, sans-serif;
+      padding: 16px;
+    }
+    .top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+    h1 { margin: 0; font-size: 26px; }
+    h1 span { color: #38bdf8; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+    input, select, button {
+      border-radius: 10px;
+      border: 1px solid #334155;
+      background: #111827;
+      color: white;
+      padding: 10px 12px;
+      font-size: 14px;
+    }
+    button { background: #38bdf8; color: #082f49; border: none; font-weight: bold; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 18px; }
+    .card { background: #111827; border-radius: 12px; padding: 14px; border-left: 4px solid #475569; }
+    .card.urgent { border-color: #ef4444; }
+    .card.warn { border-color: #f59e0b; }
+    .card.ok { border-color: #22c55e; }
+    .label { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: #94a3b8; }
+    .value { font-size: 30px; font-weight: bold; margin-top: 8px; }
+    table { width: 100%; border-collapse: collapse; background: #111827; border-radius: 12px; overflow: hidden; }
+    th, td { padding: 12px 10px; text-align: left; border-bottom: 1px solid #334155; font-size: 13px; }
+    th { background: #0f172a; color: #94a3b8; text-transform: uppercase; font-size: 11px; letter-spacing: 0.8px; }
+    .badge { display: inline-block; padding: 5px 10px; border-radius: 999px; font-size: 11px; font-weight: bold; }
+    .urgent { background: rgba(239,68,68,0.15); color: #fca5a5; }
+    .warn { background: rgba(245,158,11,0.15); color: #fbbf24; }
+    .ok { background: rgba(34,197,94,0.15); color: #86efac; }
+    .low { background: rgba(148,163,184,0.15); color: #dbeafe; }
+    .row-overdue { background: rgba(239,68,68,0.05); }
+  </style>
+</head>
+<body>
+  <div class="top">
+    <h1>🔧 PM <span>Board</span></h1>
+    <div class="row">
+      <input type="text" id="search" placeholder="Search equipment..." />
+      <select id="filterPriority">
+        <option value="">All</option>
+        <option value="URGENT">URGENT</option>
+        <option value="Medium">Medium</option>
+        <option value="Low">Low</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="cards" id="cards"></div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Equipment</th>
+        <th>Next Due</th>
+        <th>Status</th>
+        <th>Priority</th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+
+  <script>
+    const data = [
+      { equipment: "HOMO", next: "34015 hrs", status: "✅ 1,083 hrs left", priority: "Low" },
+      { equipment: "FLEX", next: "35025 hrs", status: "⚠️ OVERDUE (336 hrs)", priority: "URGENT" },
+      { equipment: "TFA 900", next: "18000 hrs", status: "⚠️ 302 hrs left", priority: "Medium" },
+      { equipment: "TFA 1000", next: "13000 hrs", status: "⚠️ 241 hrs left", priority: "Medium" },
+      { equipment: "APP Filter", next: "14 Oct 2026", status: "✅ 6 months left", priority: "Low" },
+      { equipment: "TFA 900 Date Coder", next: "14 July 2026", status: "✅ 3 months left", priority: "Low" }
+    ];
+
+    function renderCards() {
+      const total = data.length;
+      const urgent = data.filter(x => x.priority === "URGENT").length;
+      const medium = data.filter(x => x.priority === "Medium").length;
+      const low = data.filter(x => x.priority === "Low").length;
+
+      document.getElementById("cards").innerHTML = `
+        <div class="card ok">
+          <div class="label">Total</div>
+          <div class="value">${total}</div>
+        </div>
+        <div class="card urgent">
+          <div class="label">Urgent</div>
+          <div class="value">${urgent}</div>
+        </div>
+        <div class="card warn">
+          <div class="label">Medium</div>
+          <div class="value">${medium}</div>
+        </div>
+        <div class="card ok">
+          <div class="label">Low</div>
+          <div class="value">${low}</div>
+        </div>
+      `;
+    }
+
+    function getBadgeClass(status, priority) {
+      if (status.includes("OVERDUE") || priority === "URGENT") return "urgent";
+      if (status.includes("⚠️")) return "warn";
+      if (priority === "Low") return "low";
+      return "ok";
+    }
+
+    function renderTable() {
+      const filter = document.getElementById("filterPriority").value;
+      const search = document.getElementById("search").value.toLowerCase();
+      const rows = data.filter(item => {
+        const matchPriority = !filter || item.priority === filter;
+        const matchSearch = item.equipment.toLowerCase().includes(search);
+        return matchPriority && matchSearch;
+      });
+
+      document.getElementById("tbody").innerHTML = rows.map(item => {
+        const cls = getBadgeClass(item.status, item.priority);
+        const rowClass = item.priority === "URGENT" ? "row-overdue" : "";
+        return `
+          <tr class="${rowClass}">
+            <td><strong>${item.equipment}</strong></td>
+            <td>${item.next}</td>
+            <td><span class="badge ${cls}">${item.status}</span></td>
+            <td><span class="badge ${item.priority === "URGENT" ? "urgent" : item.priority === "Medium" ? "warn" : "low"}">${item.priority}</span></td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    document.getElementById("search").addEventListener("input", renderTable);
+    document.getElementById("filterPriority").addEventListener("change", renderTable);
+
+    renderCards();
+    renderTable();
+  </script>
+</body>
+</html>
